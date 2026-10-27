@@ -23,6 +23,7 @@
         <module>auth-service</module>
         <module>api-gateway</module>
         <module>enfant-service</module>
+        <module>personnel-service</module>
     </modules>
 
     <properties>

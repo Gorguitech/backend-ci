@@ -3,8 +3,7 @@ package com.daara.internatadmin.enfant;
 import com.daara.internatadmin.common.api.PrintActionResponse;
 import com.daara.internatadmin.common.audit.Audited;
 import com.daara.internatadmin.common.error.DuplicateEntityException;
-import com.daara.internatadmin.common.tx.TransactionalRetry;
-import com.daara.internatadmin.common.util.MatriculeGenerator;
+import com.daara.internatadmin.common.tx.MatriculeAllocator;
 import com.daara.internatadmin.enfant.dto.CreateEnfantRequest;
 import com.daara.internatadmin.enfant.dto.EnfantCountsResponse;
 import com.daara.internatadmin.enfant.dto.EnfantResponse;
@@ -20,16 +19,15 @@ import java.util.List;
 @Service
 public class EnfantService {
 
-    static final int MAX_ATTEMPTS = 5;
     static final String MATRICULE_PREFIX = "ENF";
     static final String BIRTH_INFO_REQUIRED = "La date de naissance ou l'âge approximatif doit être renseigné";
 
     private final EnfantRepository enfantRepository;
-    private final TransactionalRetry transactionalRetry;
+    private final MatriculeAllocator matriculeAllocator;
 
-    public EnfantService(EnfantRepository enfantRepository, TransactionalRetry transactionalRetry) {
+    public EnfantService(EnfantRepository enfantRepository, MatriculeAllocator matriculeAllocator) {
         this.enfantRepository = enfantRepository;
-        this.transactionalRetry = transactionalRetry;
+        this.matriculeAllocator = matriculeAllocator;
     }
 
     /**
@@ -48,14 +46,10 @@ public class EnfantService {
                             + "Si c'est intentionnel, renvoyez la requête avec confirmDuplicate=true.");
         }
 
-        int year = dto.entryDate().getYear();
-        String prefix = MatriculeGenerator.yearPrefix(MATRICULE_PREFIX, year);
-
-        return transactionalRetry.onUniqueViolation(MAX_ATTEMPTS, "matricule", attempt -> {
-            long sequence = enfantRepository.countByMatriculeStartingWith(prefix) + 1 + attempt;
-
+        return matriculeAllocator.allocate(MATRICULE_PREFIX, dto.entryDate().getYear(),
+                enfantRepository::countByMatriculeStartingWith, matricule -> {
             Enfant enfant = new Enfant();
-            enfant.setMatricule(MatriculeGenerator.format(MATRICULE_PREFIX, year, sequence));
+            enfant.setMatricule(matricule);
             enfant.setFirstName(dto.firstName());
             enfant.setLastName(dto.lastName());
             enfant.setBirthDate(dto.birthDate());

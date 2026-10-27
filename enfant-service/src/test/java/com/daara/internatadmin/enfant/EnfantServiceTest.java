@@ -3,6 +3,7 @@ package com.daara.internatadmin.enfant;
 import com.daara.internatadmin.common.api.PrintActionResponse;
 import com.daara.internatadmin.common.error.DuplicateEntityException;
 import com.daara.internatadmin.common.support.TestTransactionManager;
+import com.daara.internatadmin.common.tx.MatriculeAllocator;
 import com.daara.internatadmin.common.tx.TransactionalRetry;
 import com.daara.internatadmin.enfant.dto.CreateEnfantRequest;
 import com.daara.internatadmin.enfant.dto.EnfantCountsResponse;
@@ -31,7 +32,8 @@ class EnfantServiceTest {
 
     private final EnfantRepository repository = mock(EnfantRepository.class);
     private final TestTransactionManager transactionManager = new TestTransactionManager();
-    private final EnfantService service = new EnfantService(repository, new TransactionalRetry(transactionManager));
+    private final EnfantService service = new EnfantService(repository,
+            new MatriculeAllocator(new TransactionalRetry(transactionManager)));
 
     @Test
     void creation_matriculeSurLAnneeDEntreeEtTousLesChamps() {

@@ -4,12 +4,12 @@ import com.daara.internatadmin.common.audit.AuditMessaging;
 import com.daara.internatadmin.common.security.InternalApiKeyFilter;
 import com.daara.internatadmin.common.support.InternatAdminContainers;
 import com.daara.internatadmin.common.support.TestJwts;
+import com.daara.internatadmin.common.support.TestMessages;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.amqp.core.AmqpAdmin;
-import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -25,14 +25,13 @@ import org.springframework.test.web.servlet.ResultActions;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+import static com.daara.internatadmin.common.support.TestMessages.fieldNames;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.containsInAnyOrder;
@@ -396,18 +395,6 @@ class EnfantApiIT {
     }
 
     private List<JsonNode> drainAudit() throws Exception {
-        List<JsonNode> messages = new ArrayList<>();
-        Message message;
-        while ((message = rabbitTemplate.receive(AuditMessaging.QUEUE, 2000)) != null) {
-            messages.add(objectMapper.readTree(message.getBody()));
-        }
-        return messages;
-    }
-
-    private static Set<String> fieldNames(JsonNode node) {
-        Set<String> names = new TreeSet<>();
-        Iterator<String> it = node.fieldNames();
-        it.forEachRemaining(names::add);
-        return names;
+        return TestMessages.drainAudit(rabbitTemplate, objectMapper);
     }
 }

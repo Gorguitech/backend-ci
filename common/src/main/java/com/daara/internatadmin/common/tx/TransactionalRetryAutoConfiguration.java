@@ -16,4 +16,10 @@ public class TransactionalRetryAutoConfiguration {
     TransactionalRetry transactionalRetry(PlatformTransactionManager transactionManager) {
         return new TransactionalRetry(transactionManager);
     }
+
+    @Bean
+    @ConditionalOnMissingBean
+    MatriculeAllocator matriculeAllocator(TransactionalRetry transactionalRetry) {
+        return new MatriculeAllocator(transactionalRetry);
+    }
 }
