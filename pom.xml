@@ -18,7 +18,7 @@
     <description>Microservices de gestion administrative et financiere d'un Daara</description>
 
     <modules>
-        <!-- Les modules (common, services) sont ajoutes etape par etape. -->
+        <module>common</module>
     </modules>
 
     <properties>

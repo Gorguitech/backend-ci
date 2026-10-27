@@ -1,0 +1,6 @@
+com.daara.internatadmin.common.web.WebAutoConfiguration
+com.daara.internatadmin.common.security.ResourceServerSecurityAutoConfiguration
+com.daara.internatadmin.common.audit.AuditAutoConfiguration
+com.daara.internatadmin.common.tx.TransactionalRetryAutoConfiguration
+com.daara.internatadmin.common.feign.FeignSupportAutoConfiguration
+com.daara.internatadmin.common.openapi.OpenApiAutoConfiguration
