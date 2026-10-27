@@ -4,7 +4,6 @@ import com.daara.internatadmin.common.security.InternatAdminSecurityProperties;
 import com.daara.internatadmin.common.security.RsaJwtDecoders;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
-import io.github.resilience4j.timelimiter.TimeLimiterConfig;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.boot.autoconfigure.security.SecurityProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -74,19 +73,15 @@ public class GatewaySecurityConfig {
                                           InternatAdminSecurityProperties security) {
         Duration timeout = properties.accountStateTimeout();
 
-        // Configure ici, juste avant create() : un Customizer serait applique trop tard et le circuit
-        // garderait la configuration par defaut (delai de 1 s).
+        // Configure ici, juste avant create() : un Customizer serait applique trop tard.
+        // Pas de limite de temps Resilience4j (desactivee par defaut dans common) : le delai effectif est celui
+        // du client HTTP ci-dessous (account-state-timeout), pour la connexion comme pour la lecture.
         circuitBreakerFactory.configure(builder -> builder
                 .circuitBreakerConfig(CircuitBreakerConfig.custom()
                         .slidingWindowSize(20)
                         .minimumNumberOfCalls(10)
                         .failureRateThreshold(50)
                         .waitDurationInOpenState(Duration.ofSeconds(10))
-                        .build())
-                // filet de securite seulement : le delai effectif est celui du client HTTP (account-state-timeout).
-                // Une marge large evite un faux 503 sur la toute premiere requete, qui paie le chargement des classes.
-                .timeLimiterConfig(TimeLimiterConfig.custom()
-                        .timeoutDuration(timeout.plusSeconds(3))
                         .build()), AccountStateClient.BREAKER_ID);
         JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(
                 HttpClient.newBuilder().connectTimeout(timeout).build());
