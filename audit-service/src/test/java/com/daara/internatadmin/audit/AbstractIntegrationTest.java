@@ -1,6 +1,7 @@
 package com.daara.internatadmin.audit;
 
 import com.daara.internatadmin.audit.domain.AuditService;
+import com.daara.internatadmin.common.support.InternatAdminContainers;
 import com.daara.internatadmin.common.support.TestJwts;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -18,7 +19,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
         "spring.rabbitmq.listener.simple.retry.max-interval=200ms"
 })
 @AutoConfigureMockMvc
-@Import(TestcontainersConfiguration.class)
+@Import(InternatAdminContainers.class)
 public abstract class AbstractIntegrationTest {
 
     // Espion declare ici pour que toutes les classes partagent un seul contexte (et une seule paire de conteneurs).

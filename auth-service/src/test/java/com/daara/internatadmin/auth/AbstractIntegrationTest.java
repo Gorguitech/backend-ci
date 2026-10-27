@@ -1,6 +1,7 @@
 package com.daara.internatadmin.auth;
 
 import com.daara.internatadmin.common.audit.AuditMessaging;
+import com.daara.internatadmin.common.support.InternatAdminContainers;
 import com.daara.internatadmin.common.support.TestJwts;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,7 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
-@Import(TestcontainersConfiguration.class)
+@Import(InternatAdminContainers.class)
 public abstract class AbstractIntegrationTest {
 
     protected static final String ADMIN_INITIAL_PASSWORD = "Admin-Initial-2026";

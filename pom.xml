@@ -21,6 +21,7 @@
         <module>common</module>
         <module>audit-service</module>
         <module>auth-service</module>
+        <module>api-gateway</module>
     </modules>
 
     <properties>

@@ -1,6 +1,5 @@
 package com.daara.internatadmin.common.security;
 
-import com.daara.internatadmin.common.util.RsaKeys;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -12,11 +11,7 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
-import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.Http403ForbiddenEntryPoint;
@@ -49,12 +44,7 @@ public class ResourceServerSecurityAutoConfiguration {
 
     @Bean
     JwtDecoder jwtDecoder(InternatAdminSecurityProperties properties) {
-        NimbusJwtDecoder decoder = NimbusJwtDecoder
-                .withPublicKey(RsaKeys.publicKeyFromBase64Pem(properties.jwtPublicKeyB64()))
-                .signatureAlgorithm(SignatureAlgorithm.RS256)
-                .build();
-        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(new JwtTimestampValidator(properties.clockSkew())));
-        return decoder;
+        return RsaJwtDecoders.create(properties);
     }
 
     @Bean
