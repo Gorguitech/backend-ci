@@ -22,6 +22,7 @@
         <module>audit-service</module>
         <module>auth-service</module>
         <module>api-gateway</module>
+        <module>enfant-service</module>
     </modules>
 
     <properties>
