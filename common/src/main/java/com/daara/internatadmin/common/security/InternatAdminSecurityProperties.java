@@ -31,5 +31,14 @@ public record InternatAdminSecurityProperties(
             clockSkew = Duration.ofSeconds(60);
         }
         publicPaths = (publicPaths == null) ? List.of() : List.copyOf(publicPaths);
+        requireResolved("jwt-public-key-b64", jwtPublicKeyB64);
+        requireResolved("internal-api-key", internalApiKey);
+    }
+
+    // Une variable d'environnement absente laisse le texte ${VAR} tel quel : on refuse de demarrer avec.
+    private static void requireResolved(String name, String value) {
+        if (value != null && value.startsWith("${")) {
+            throw new IllegalStateException("internatadmin.security." + name + " : variable d'environnement non definie (" + value + ")");
+        }
     }
 }

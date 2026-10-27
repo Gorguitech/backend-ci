@@ -42,6 +42,22 @@ class AutoConfigurationTest {
         auditRunner.withPropertyValues("internatadmin.audit.publisher.enabled=false").run(context -> {
             assertThat(context).doesNotHaveBean(AuditPublisher.class);
             assertThat(context).doesNotHaveBean(AuditAspect.class);
+            assertThat(context).hasBean("auditQueue").hasBean("auditDeadLetterQueue");
+        });
+    }
+
+    @Test
+    void audit_fileDurableAvecLettresMortesVersLaDlq() {
+        auditRunner.run(context -> {
+            org.springframework.amqp.core.Queue queue = context.getBean("auditQueue", org.springframework.amqp.core.Queue.class);
+            assertThat(queue.getName()).isEqualTo("audit.events");
+            assertThat(queue.isDurable()).isTrue();
+            assertThat(queue.getArguments())
+                    .containsEntry("x-dead-letter-exchange", "audit.dlx")
+                    .containsEntry("x-dead-letter-routing-key", "audit.events.dlq");
+            org.springframework.amqp.core.Queue dlq = context.getBean("auditDeadLetterQueue", org.springframework.amqp.core.Queue.class);
+            assertThat(dlq.isDurable()).isTrue();
+            assertThat(dlq.getArguments()).doesNotContainKey("x-message-ttl");
         });
     }
 
@@ -60,6 +76,17 @@ class AutoConfigurationTest {
                         ResourceServerSecurityAutoConfiguration.class))
                 .withPropertyValues("internatadmin.security.jwt-public-key-b64=" + TestJwts.publicKeyB64())
                 .run(context -> assertThat(context).hasFailed());
+    }
+
+    @Test
+    void securite_demarrageImpossibleSiLaVariableDEnvironnementNEstPasDefinie() {
+        new WebApplicationContextRunner()
+                .withConfiguration(AutoConfigurations.of(JacksonAutoConfiguration.class,
+                        ResourceServerSecurityAutoConfiguration.class))
+                .withPropertyValues("internatadmin.security.jwt-public-key-b64=" + TestJwts.publicKeyB64(),
+                        "internatadmin.security.internal-api-key=${INTERNAL_API_KEY}")
+                .run(context -> assertThat(context).hasFailed()
+                        .getFailure().rootCause().hasMessageContaining("variable d'environnement non definie"));
     }
 
     @Test
