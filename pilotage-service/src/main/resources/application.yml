@@ -1,0 +1,51 @@
+# Les secrets n'ont pas de valeur par defaut : ils viennent de l'environnement (.env, voir .env.example).
+# Aucune base de donnees : toutes les valeurs sont lues dans les services qui en sont proprietaires.
+spring:
+  application:
+    name: pilotage-service
+  cloud:
+    openfeign:
+      circuitbreaker:
+        enabled: true
+      client:
+        config:
+          default:
+            connect-timeout: 2000
+            # seul delai applique a chaque appel : la limite de temps de Resilience4j est desactivee
+            # par defaut dans common (CircuitBreakerDefaultsEnvironmentPostProcessor)
+            read-timeout: 3000
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      base-path: /
+      exposure:
+        include: health
+      path-mapping:
+        health: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+internatadmin:
+  security:
+    jwt-public-key-b64: ${JWT_PUBLIC_KEY_B64}
+    internal-api-key: ${INTERNAL_API_KEY}
+  services:
+    auth: ${AUTH_SERVICE_URL:http://auth-service:8080}
+    enfant: ${ENFANT_SERVICE_URL:http://enfant-service:8080}
+    personnel: ${PERSONNEL_SERVICE_URL:http://personnel-service:8080}
+    paiement: ${PAIEMENT_SERVICE_URL:http://paiement-service:8080}
+    comptabilite: ${COMPTABILITE_SERVICE_URL:http://comptabilite-service:8080}
+  pilotage:
+    # attente maximale de l'ensemble des appels d'une requete, lances en parallele
+    max-wait: ${PILOTAGE_MAX_WAIT:5s}
+
+logging:
+  pattern:
+    level: "%5p [%X{requestId:-}]"

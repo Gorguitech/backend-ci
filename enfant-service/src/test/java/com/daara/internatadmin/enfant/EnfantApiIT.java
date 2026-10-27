@@ -316,6 +316,11 @@ class EnfantApiIT {
                 .andExpect(jsonPath("$.totalEnVacances").value(1))
                 .andExpect(jsonPath("$.totalSortis").value(1))
                 .andExpect(jsonPath("$.nouveauxDuMois").value(1));
+        for (int mois : new int[] {0, 13}) {
+            internal("/internal/enfants/counts?year=2026&month=" + mois).andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("INVALID_REQUEST"))
+                    .andExpect(jsonPath("$.message").value("Mois invalide : " + mois));
+        }
         internal("/internal/enfants/999999").andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("INVALID_REQUEST"));
 

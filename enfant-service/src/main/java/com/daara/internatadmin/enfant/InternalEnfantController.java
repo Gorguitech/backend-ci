@@ -40,6 +40,10 @@ public class InternalEnfantController {
     /** Lu par pilotage-service : statistiques du module et tableau de bord. */
     @GetMapping("/counts")
     public EnfantCountsResponse counts(@RequestParam int year, @RequestParam int month) {
+        // YearMonth.of leverait une DateTimeException, traduite en 500 : un mois hors de 1 a 12 est une erreur de requete
+        if (month < 1 || month > 12) {
+            throw new IllegalArgumentException("Mois invalide : " + month);
+        }
         return enfantService.counts(YearMonth.of(year, month));
     }
 }

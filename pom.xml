@@ -26,6 +26,7 @@
         <module>personnel-service</module>
         <module>paiement-service</module>
         <module>comptabilite-service</module>
+        <module>pilotage-service</module>
     </modules>
 
     <properties>
