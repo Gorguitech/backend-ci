@@ -1,0 +1,30 @@
+# Build Maven
+target/
+!.mvn/wrapper/maven-wrapper.properties
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.classpath
+.project
+.settings/
+.factorypath
+.apt_generated
+.sts4-cache/
+
+# Systeme
+.DS_Store
+
+# Secrets et configuration locale
+.env
+*.pem
+*.key
+
+# Fichiers televerses (logos)
+uploads/
+
+# Journaux
+*.log
