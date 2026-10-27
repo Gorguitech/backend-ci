@@ -24,6 +24,7 @@
         <module>api-gateway</module>
         <module>enfant-service</module>
         <module>personnel-service</module>
+        <module>paiement-service</module>
     </modules>
 
     <properties>
