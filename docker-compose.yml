@@ -10,6 +10,7 @@
 #
 # Usage : cp .env.example .env  (puis renseigner les valeurs)
 #         docker compose --profile all up -d --build
+# Limites memoire : 384 Mo par service, 512 Mo pour paiement et comptabilite, 256 Mo pour la gateway.
 # Seule la gateway publie un port (8080). Aucun secret n'est dans les images : tout vient de .env.
 
 x-backend: &backend
@@ -151,6 +152,8 @@ services:
     build:
       context: .
       args: { SERVICE: paiement-service }
+    # mesure (profil all) : 312 Mo au repos et 325 Mo apres le test de fumee, soit 85 % de 384 Mo
+    mem_limit: 512m
     profiles: [eleves, finance, all]
     environment:
       <<: [*common-env, *data-env]
@@ -165,6 +168,8 @@ services:
     build:
       context: .
       args: { SERVICE: comptabilite-service }
+    # mesure (profil all) : 312 Mo au repos et 325 Mo apres le test de fumee, soit 85 % de 384 Mo
+    mem_limit: 512m
     profiles: [finance, all]
     environment:
       <<: [*common-env, *data-env]
