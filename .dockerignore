@@ -1,0 +1,55 @@
+# Contexte de build des images : uniquement le wrapper Maven, les POM et les sources principales.
+# Rien de sensible ni d'inutile n'est envoye au demon Docker.
+
+# Gestion de versions et IDE
+.git
+.gitignore
+.gitattributes
+.idea
+.vscode
+**/*.iml
+**/*.iws
+**/*.ipr
+**/.classpath
+**/.project
+**/.settings
+**/.factorypath
+
+# Systeme
+**/.DS_Store
+
+# Resultats de build (les jars sont reconstruits dans l'image)
+**/target
+
+# Secrets et configuration locale : tout passe par les variables d'environnement a l'execution
+.env
+.env.*
+**/*.pem
+**/*.key
+**/*.p12
+**/*.jks
+**/*.keystore
+**/secrets
+**/*.secret
+**/*.secrets
+**/credentials
+**/*.credentials
+**/credentials.json
+**/*.crt
+**/id_rsa*
+**/id_ed25519*
+
+# Documentation, scripts d'exploitation et de test, tests (non compiles dans l'image)
+docs
+scripts
+**/src/test
+**/*.md
+**/*.log
+**/uploads
+
+# Fichiers de Compose et d'infrastructure locale
+docker
+docker-compose*.yml
+Dockerfile
+.dockerignore
+Jenkinsfile

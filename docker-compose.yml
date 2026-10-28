@@ -1,9 +1,45 @@
-# Environnement de developpement local du backend.
-# Profils : infra (postgres, rabbitmq). Les profils core, eleves, finance et all
-# sont ajoutes avec les services correspondants.
+# Environnement local du backend : infrastructure et microservices.
+#
+# Profils (chacun inclut le precedent) :
+#   infra   : postgres, rabbitmq
+#   core    : + api-gateway, auth-service, audit-service
+#   eleves  : + enfant-service, paiement-service
+#   finance : + personnel-service, comptabilite-service
+#   all     : + pilotage-service
+# Un service absent du profil choisi repond 503 par la gateway, jamais 401.
 #
 # Usage : cp .env.example .env  (puis renseigner les valeurs)
-#         docker compose --profile infra up -d
+#         docker compose --profile all up -d --build
+# Seule la gateway publie un port (8080). Aucun secret n'est dans les images : tout vient de .env.
+
+x-backend: &backend
+  build:
+    context: .
+    dockerfile: Dockerfile
+  restart: unless-stopped
+  mem_limit: 384m
+  # arret propre (server.shutdown=graceful) avant SIGKILL
+  stop_grace_period: 30s
+
+# variables communes a tous les services : uniquement des references a .env
+x-common-env: &common-env
+  TZ: ${TZ}
+  JWT_PUBLIC_KEY_B64: ${JWT_PUBLIC_KEY_B64}
+  INTERNAL_API_KEY: ${INTERNAL_API_KEY}
+
+x-data-env: &data-env
+  DB_HOST: postgres
+  DB_PORT: "5432"
+  RABBITMQ_HOST: rabbitmq
+  RABBITMQ_PORT: "5672"
+  RABBITMQ_USER: ${RABBITMQ_USER}
+  RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+
+x-data-deps: &data-deps
+  postgres:
+    condition: service_healthy
+  rabbitmq:
+    condition: service_healthy
 
 name: internatadmin
 
@@ -55,6 +91,129 @@ services:
       retries: 5
     restart: unless-stopped
 
+  auth-service:
+    <<: *backend
+    image: internatadmin-backend:auth-service-${IMAGE_TAG:-local}
+    build:
+      context: .
+      args: { SERVICE: auth-service }
+    profiles: [core, eleves, finance, all]
+    environment:
+      <<: [*common-env, *data-env]
+      AUTH_DB_PASSWORD: ${AUTH_DB_PASSWORD}
+      JWT_PRIVATE_KEY_B64: ${JWT_PRIVATE_KEY_B64}
+      JWT_EXPIRATION_MINUTES: ${JWT_EXPIRATION_MINUTES}
+      ADMIN_INITIAL_PASSWORD_HASH: ${ADMIN_INITIAL_PASSWORD_HASH}
+      LOGO_DIR: /data/logos
+    volumes:
+      - logos:/data/logos
+    depends_on: *data-deps
+
+  audit-service:
+    <<: *backend
+    image: internatadmin-backend:audit-service-${IMAGE_TAG:-local}
+    build:
+      context: .
+      args: { SERVICE: audit-service }
+    profiles: [core, eleves, finance, all]
+    environment:
+      <<: [*common-env, *data-env]
+      AUDIT_DB_PASSWORD: ${AUDIT_DB_PASSWORD}
+    depends_on: *data-deps
+
+  enfant-service:
+    <<: *backend
+    image: internatadmin-backend:enfant-service-${IMAGE_TAG:-local}
+    build:
+      context: .
+      args: { SERVICE: enfant-service }
+    profiles: [eleves, finance, all]
+    environment:
+      <<: [*common-env, *data-env]
+      ENFANT_DB_PASSWORD: ${ENFANT_DB_PASSWORD}
+    depends_on: *data-deps
+
+  personnel-service:
+    <<: *backend
+    image: internatadmin-backend:personnel-service-${IMAGE_TAG:-local}
+    build:
+      context: .
+      args: { SERVICE: personnel-service }
+    profiles: [finance, all]
+    environment:
+      <<: [*common-env, *data-env]
+      PERSONNEL_DB_PASSWORD: ${PERSONNEL_DB_PASSWORD}
+    depends_on: *data-deps
+
+  paiement-service:
+    <<: *backend
+    image: internatadmin-backend:paiement-service-${IMAGE_TAG:-local}
+    build:
+      context: .
+      args: { SERVICE: paiement-service }
+    profiles: [eleves, finance, all]
+    environment:
+      <<: [*common-env, *data-env]
+      PAIEMENT_DB_PASSWORD: ${PAIEMENT_DB_PASSWORD}
+      ENFANT_SERVICE_URL: http://enfant-service:8080
+      PERSONNEL_SERVICE_URL: http://personnel-service:8080
+    depends_on: *data-deps
+
+  comptabilite-service:
+    <<: *backend
+    image: internatadmin-backend:comptabilite-service-${IMAGE_TAG:-local}
+    build:
+      context: .
+      args: { SERVICE: comptabilite-service }
+    profiles: [finance, all]
+    environment:
+      <<: [*common-env, *data-env]
+      COMPTABILITE_DB_PASSWORD: ${COMPTABILITE_DB_PASSWORD}
+      PAIEMENT_SERVICE_URL: http://paiement-service:8080
+    depends_on: *data-deps
+
+  # sans base de donnees ni RabbitMQ : lit les autres services
+  pilotage-service:
+    <<: *backend
+    image: internatadmin-backend:pilotage-service-${IMAGE_TAG:-local}
+    build:
+      context: .
+      args: { SERVICE: pilotage-service }
+    profiles: [all]
+    environment:
+      <<: *common-env
+      AUTH_SERVICE_URL: http://auth-service:8080
+      ENFANT_SERVICE_URL: http://enfant-service:8080
+      PERSONNEL_SERVICE_URL: http://personnel-service:8080
+      PAIEMENT_SERVICE_URL: http://paiement-service:8080
+      COMPTABILITE_SERVICE_URL: http://comptabilite-service:8080
+
+  # seul point d'entree publie ; attend auth-service (controle de l'etat du compte a chaque requete)
+  api-gateway:
+    <<: *backend
+    image: internatadmin-backend:api-gateway-${IMAGE_TAG:-local}
+    build:
+      context: .
+      args: { SERVICE: api-gateway }
+    profiles: [core, eleves, finance, all]
+    mem_limit: 256m
+    environment:
+      <<: *common-env
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+      AUTH_SERVICE_URL: http://auth-service:8080
+      AUDIT_SERVICE_URL: http://audit-service:8080
+      ENFANT_SERVICE_URL: http://enfant-service:8080
+      PERSONNEL_SERVICE_URL: http://personnel-service:8080
+      PAIEMENT_SERVICE_URL: http://paiement-service:8080
+      COMPTABILITE_SERVICE_URL: http://comptabilite-service:8080
+      PILOTAGE_SERVICE_URL: http://pilotage-service:8080
+    ports:
+      - "${GATEWAY_HOST_PORT:-8080}:8080"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+
 volumes:
   pgdata:
   rabbitmq-data:
+  logos:
