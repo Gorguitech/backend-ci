@@ -5,7 +5,7 @@
 //   - plugins : workflow-aggregator, credentials-binding, junit, github, pipeline-build-step ;
 //   - credentials :
 //       dockerhub-credentials : utilisateur et jeton d'acces Docker Hub ;
-//       nvd-api-key           : texte secret, cle de l'API NVD pour OWASP Dependency-Check ;
+//       nvd-api-key           : texte secret, cle de l'API NVD, seulement si RUN_DEPCHECK est coche ;
 //       sonar-token           : texte secret, seulement si RUN_SONAR est coche ;
 //   - le profil Compose all ne tourne pas pendant un build (memoire du poste).
 //
@@ -70,6 +70,7 @@ pipeline {
 
     parameters {
         booleanParam(name: 'BUILD_ALL', defaultValue: false, description: 'Reconstruire les 8 images meme sans changement')
+        booleanParam(name: 'RUN_DEPCHECK', defaultValue: true, description: 'Analyse des dependances OWASP Dependency-Check')
         string(name: 'DC_FAIL_CVSS', defaultValue: '9', description: 'Score CVSS a partir duquel OWASP Dependency-Check fait echouer le build')
         booleanParam(name: 'RUN_SONAR', defaultValue: false, description: 'Analyse SonarQube (serveur et credential sonar-token requis)')
         string(name: 'SONAR_HOST_URL', defaultValue: 'http://host.docker.internal:9000', description: 'URL du serveur SonarQube')
@@ -140,6 +141,7 @@ pipeline {
         }
 
         stage('Analyse des dependances (OWASP)') {
+            when { expression { params.RUN_DEPCHECK } }
             steps {
                 withCredentials([string(credentialsId: 'nvd-api-key', variable: 'NVD_API_KEY')]) {
                     // la cle reste dans l'environnement : seul son nom figure dans la commande
