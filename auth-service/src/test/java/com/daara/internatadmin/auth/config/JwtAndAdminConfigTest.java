@@ -13,6 +13,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtTimestampValidator;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 
 import java.time.Clock;
@@ -37,12 +38,13 @@ class JwtAndAdminConfigTest {
     private static final String VALID_HASH = new BCryptPasswordEncoder(4).encode("mot-de-passe-de-test");
 
     private final Instant now = Instant.parse("2026-10-27T10:00:00Z");
+    private final Clock clock = Clock.fixed(now, ZoneOffset.UTC);
 
     private JwtTokenService tokenService() {
         return new AuthSecurityConfig().jwtTokenService(
                 new JwtSigningProperties(TestJwts.privateKeyB64(), 480),
                 new InternatAdminSecurityProperties(TestJwts.publicKeyB64(), Duration.ofSeconds(60), "cle", List.of()),
-                Clock.fixed(now, ZoneOffset.UTC));
+                clock);
     }
 
     @Test
@@ -67,8 +69,13 @@ class JwtAndAdminConfigTest {
         assertThat(((Number) payload.get("iat")).longValue()).isEqualTo(now.getEpochSecond());
         assertThat(((Number) payload.get("exp")).longValue()).isEqualTo(now.getEpochSecond() + 480 * 60);
 
-        Jwt decoded = NimbusJwtDecoder.withPublicKey(RsaKeys.publicKeyFromBase64Pem(TestJwts.publicKeyB64()))
-                .build().decode(token);
+        // verification a la meme horloge figee que la signature : le resultat ne depend pas de la date du jour
+        NimbusJwtDecoder decoder = NimbusJwtDecoder.withPublicKey(RsaKeys.publicKeyFromBase64Pem(TestJwts.publicKeyB64()))
+                .build();
+        JwtTimestampValidator timestamps = new JwtTimestampValidator();
+        timestamps.setClock(clock);
+        decoder.setJwtValidator(timestamps);
+        Jwt decoded = decoder.decode(token);
         assertThat(decoded.getSubject()).isEqualTo("awa.diop");
     }
 

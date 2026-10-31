@@ -61,7 +61,7 @@ class AuditServiceTest {
     @Test
     void enregistrement_textesTronquesAuxLongueursDesColonnes() {
         service.record(new AuditEvent(UUID.randomUUID(), 1L, "u".repeat(60), "a".repeat(60), "e".repeat(60), 1L,
-                "d".repeat(501), LocalDateTime.now()));
+                "d".repeat(501), LocalDateTime.now(clock)));
 
         ArgumentCaptor<AuditLog> captor = ArgumentCaptor.forClass(AuditLog.class);
         verify(repository).save(captor.capture());
@@ -74,7 +74,7 @@ class AuditServiceTest {
     @Test
     void enregistrement_detailDe500CaracteresConserveIntegralement() {
         service.record(new AuditEvent(UUID.randomUUID(), 1L, "admin", "UPDATE", "Enfant", 1L,
-                "d".repeat(500), LocalDateTime.now()));
+                "d".repeat(500), LocalDateTime.now(clock)));
 
         ArgumentCaptor<AuditLog> captor = ArgumentCaptor.forClass(AuditLog.class);
         verify(repository).save(captor.capture());
@@ -86,7 +86,7 @@ class AuditServiceTest {
         UUID eventId = UUID.randomUUID();
         when(repository.existsByEventId(eventId)).thenReturn(true);
 
-        service.record(new AuditEvent(eventId, 1L, "admin", "CREATE", "Enfant", 1L, "d", LocalDateTime.now()));
+        service.record(new AuditEvent(eventId, 1L, "admin", "CREATE", "Enfant", 1L, "d", LocalDateTime.now(clock)));
 
         verify(repository, never()).save(any());
     }
