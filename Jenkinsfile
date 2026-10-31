@@ -1,7 +1,7 @@
 // Pipeline CI de backend-ci : build, tests, analyses de securite, images Docker et publication sur Docker Hub.
 //
 // Prerequis de l'instance Jenkins :
-//   - agent portant le label MI_AG (conteneur avec la socket Docker de l'hote et le volume jenkins_home) ;
+//   - agent portant le label MI_AG, lance directement sur le Mac (agent.jar) avec Docker Desktop ;
 //   - plugins : workflow-aggregator, credentials-binding, junit, github, pipeline-build-step ;
 //   - credentials :
 //       dockerhub-credentials : utilisateur et jeton d'acces Docker Hub ;
@@ -9,8 +9,9 @@
 //       sonar-token           : texte secret, seulement si RUN_SONAR est coche ;
 //   - le profil Compose all ne tourne pas pendant un build (memoire du poste).
 //
-// Les outils (JDK 21, Trivy) tournent dans des conteneurs ephemeres qui partagent le volume de Jenkins
-// (--volumes-from) : l'espace de travail, le depot Maven et les bases NVD et Trivy y restent en cache.
+// Les outils (JDK 21, Trivy) tournent dans des conteneurs ephemeres : l'espace de travail y est monte au meme
+// chemin que sur l'hote, et le dossier persistant ~/.cache/internatadmin-ci de l'hote sert de HOME (TOOL_HOME),
+// avec le depot Maven de l'hote (~/.m2) monte dedans : dependances Maven, bases NVD et Trivy restent en cache.
 // Aucun secret n'est ecrit dans une commande ni dans une image : uniquement des variables d'environnement.
 
 def SERVICES = ['api-gateway', 'auth-service', 'audit-service', 'enfant-service',
@@ -18,14 +19,16 @@ def SERVICES = ['api-gateway', 'auth-service', 'audit-service', 'enfant-service'
 // un changement dans ces chemins concerne toutes les images
 def SHARED_PATHS = ['common/', 'pom.xml', 'Dockerfile', '.dockerignore', '.mvn/', 'mvnw']
 
-// Lance une commande dans un conteneur outil, avec l'utilisateur de Jenkins et la socket Docker de l'hote.
+// Lance une commande dans un conteneur outil, avec l'utilisateur de l'agent et la socket Docker de l'hote.
+// Sous Docker Desktop, la socket vue du conteneur appartient a root:root (0660) : d'ou --group-add 0.
 // extraArgs : options docker run supplementaires (variables transmises par nom, sans valeur).
 // returnStatus : renvoie le code de sortie au lieu de faire echouer le stage.
 def runTool(String image, String extraArgs, String command, boolean returnStatus = false) {
     sh returnStatus: returnStatus, script: """
-        docker run --rm --volumes-from "\$(hostname)" -w "\$WORKSPACE" \\
-            -u "\$(id -u):\$(id -g)" --group-add "\$(stat -c %g /var/run/docker.sock)" \\
-            -v /var/run/docker.sock:/var/run/docker.sock -e HOME="\$JENKINS_HOME" \\
+        mkdir -p "\$HOME/.m2" "\$HOME/.cache/internatadmin-ci"
+        docker run --rm -v "\$WORKSPACE:\$WORKSPACE" -w "\$WORKSPACE" \\
+            -v "\$HOME/.cache/internatadmin-ci:\$TOOL_HOME" -v "\$HOME/.m2:\$TOOL_HOME/.m2" -e HOME="\$TOOL_HOME" \\
+            -u "\$(id -u):\$(id -g)" --group-add 0 -v /var/run/docker.sock:/var/run/docker.sock \\
             ${extraArgs} ${image} ${command}
     """
 }
@@ -82,6 +85,8 @@ pipeline {
     environment {
         BUILD_IMAGE = 'eclipse-temurin:21-jdk-alpine'
         TRIVY_IMAGE = 'aquasec/trivy:0.58.2'
+        // HOME des conteneurs outils, adosse a ~/.cache/internatadmin-ci sur l'hote
+        TOOL_HOME = '/ci-home'
         DC_VERSION = '12.1.0'
         SONAR_PLUGIN_VERSION = '5.0.0.4389'
         DOCKERHUB_USER = 'abdoulaye940'
@@ -148,7 +153,7 @@ pipeline {
                     runTool(env.BUILD_IMAGE, '-e NVD_API_KEY',
                             "./mvnw -B org.owasp:dependency-check-maven:${DC_VERSION}:aggregate " +
                             '-DnvdApiKeyEnvironmentVariable=NVD_API_KEY ' +
-                            '-DdataDirectory="$JENKINS_HOME/dependency-check-data" ' +
+                            '-DdataDirectory="$TOOL_HOME/dependency-check-data" ' +
                             "-Dformats=HTML,JSON -DfailBuildOnCVSS=${params.DC_FAIL_CVSS} " +
                             '-DossindexAnalyzerEnabled=false')
                 }
@@ -199,10 +204,10 @@ pipeline {
                         def image = "${IMAGE_REPO}:${svc}-${env.GIT_SHA}"
                         // rapport HIGH et CRITICAL archive, puis controle bloquant sur CRITICAL seulement
                         runTool(env.TRIVY_IMAGE, '',
-                                "image --cache-dir \"\$JENKINS_HOME/.cache/trivy\" --no-progress " +
+                                "image --cache-dir \"\$TOOL_HOME/.cache/trivy\" --no-progress " +
                                 "--severity HIGH,CRITICAL --format table --output reports/trivy/${svc}.txt ${image}")
                         def status = runTool(env.TRIVY_IMAGE, '',
-                                "image --cache-dir \"\$JENKINS_HOME/.cache/trivy\" --skip-db-update --no-progress " +
+                                "image --cache-dir \"\$TOOL_HOME/.cache/trivy\" --skip-db-update --no-progress " +
                                 "--severity CRITICAL --exit-code 1 --format json " +
                                 "--output reports/trivy/${svc}-critical.json ${image}", true)
                         if (status != 0) {
