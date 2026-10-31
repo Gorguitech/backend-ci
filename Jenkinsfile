@@ -204,10 +204,10 @@ pipeline {
                         def image = "${IMAGE_REPO}:${svc}-${env.GIT_SHA}"
                         // rapport HIGH et CRITICAL archive, puis controle bloquant sur CRITICAL seulement
                         runTool(env.TRIVY_IMAGE, '',
-                                "image --cache-dir \"\$TOOL_HOME/.cache/trivy\" --no-progress " +
+                                "image --timeout 20m --cache-dir \"\$TOOL_HOME/.cache/trivy\" --no-progress " +
                                 "--severity HIGH,CRITICAL --format table --output reports/trivy/${svc}.txt ${image}")
                         def status = runTool(env.TRIVY_IMAGE, '',
-                                "image --cache-dir \"\$TOOL_HOME/.cache/trivy\" --skip-db-update --no-progress " +
+                                "image --timeout 20m --cache-dir \"\$TOOL_HOME/.cache/trivy\" --skip-db-update --no-progress " +
                                 "--severity CRITICAL --exit-code 1 --format json " +
                                 "--output reports/trivy/${svc}-critical.json ${image}", true)
                         if (status != 0) {
