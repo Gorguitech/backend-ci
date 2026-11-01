@@ -155,6 +155,7 @@ pipeline {
                             "./mvnw -B org.owasp:dependency-check-maven:${DC_VERSION}:aggregate " +
                             '-DnvdApiKeyEnvironmentVariable=NVD_API_KEY ' +
                             '-DdataDirectory="$TOOL_HOME/dependency-check-data" ' +
+                            '-DsuppressionFiles="$WORKSPACE/dependency-check-suppressions.xml" ' +
                             "-Dformats=HTML,JSON -DfailBuildOnCVSS=${params.DC_FAIL_CVSS} " +
                             '-DossindexAnalyzerEnabled=false')
                 }
@@ -206,11 +207,12 @@ pipeline {
                         // rapport HIGH et CRITICAL archive, puis controle bloquant sur CRITICAL seulement
                         runTool(env.TRIVY_IMAGE, '',
                                 "image --timeout 20m --cache-dir \"\$TOOL_HOME/.cache/trivy\" --no-progress " +
+                                "--ignorefile .trivyignore --show-suppressed " +
                                 "--severity HIGH,CRITICAL --format table --output reports/trivy/${svc}.txt ${image}")
                         // code dedie : 10 = vulnerabilites trouvees, tout autre code non nul = echec de l'outil
                         def status = runTool(env.TRIVY_IMAGE, '',
                                 "image --timeout 20m --cache-dir \"\$TOOL_HOME/.cache/trivy\" --skip-db-update --no-progress " +
-                                "--severity CRITICAL --exit-code ${TRIVY_VULN_EXIT_CODE} --format json " +
+                                "--ignorefile .trivyignore --severity CRITICAL --exit-code ${TRIVY_VULN_EXIT_CODE} --format json " +
                                 "--output reports/trivy/${svc}-critical.json ${image}", true)
                         if (status.toString() == TRIVY_VULN_EXIT_CODE) {
                             critical << svc
@@ -263,7 +265,7 @@ pipeline {
     post {
         always {
             archiveArtifacts allowEmptyArchive: true, fingerprint: false, artifacts:
-                'target/dependency-check-report.*, reports/trivy/**, **/target/site/jacoco/**'
+                'target/dependency-check-report.*, reports/trivy/**, .trivyignore, dependency-check-suppressions.xml, **/target/site/jacoco/**'
             sh 'docker logout >/dev/null 2>&1 || true'
             script {
                 // images locales du build : elles sont sur Docker Hub, on libere le disque du poste
