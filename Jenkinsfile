@@ -85,6 +85,7 @@ pipeline {
     environment {
         BUILD_IMAGE = 'eclipse-temurin:21-jdk-alpine'
         TRIVY_IMAGE = 'aquasec/trivy:0.58.2'
+        TRIVY_VULN_EXIT_CODE = '10'
         // HOME des conteneurs outils, adosse a ~/.cache/internatadmin-ci sur l'hote
         TOOL_HOME = '/ci-home'
         DC_VERSION = '12.1.0'
@@ -206,12 +207,15 @@ pipeline {
                         runTool(env.TRIVY_IMAGE, '',
                                 "image --timeout 20m --cache-dir \"\$TOOL_HOME/.cache/trivy\" --no-progress " +
                                 "--severity HIGH,CRITICAL --format table --output reports/trivy/${svc}.txt ${image}")
+                        // code dedie : 10 = vulnerabilites trouvees, tout autre code non nul = echec de l'outil
                         def status = runTool(env.TRIVY_IMAGE, '',
                                 "image --timeout 20m --cache-dir \"\$TOOL_HOME/.cache/trivy\" --skip-db-update --no-progress " +
-                                "--severity CRITICAL --exit-code 1 --format json " +
+                                "--severity CRITICAL --exit-code ${TRIVY_VULN_EXIT_CODE} --format json " +
                                 "--output reports/trivy/${svc}-critical.json ${image}", true)
-                        if (status != 0) {
+                        if (status.toString() == TRIVY_VULN_EXIT_CODE) {
                             critical << svc
+                        } else if (status != 0) {
+                            error("Echec de l'analyse Trivy de ${svc} (code ${status}) : resultat inconnu, pas une vulnerabilite")
                         }
                     }
                     if (critical) {
