@@ -37,10 +37,20 @@
         <springdoc.version>2.8.17</springdoc.version>
         <wiremock.version>3.13.2</wiremock.version>
         <jacoco.version>0.8.13</jacoco.version>
+        <!-- Surcharges de securite, a retirer des qu'une version de Boot ou Spring Cloud les apporte. -->
+        <tomcat.version>10.1.61</tomcat.version>
+        <jackson-bom.version>2.21.8</jackson-bom.version>
+        <bouncycastle.version>1.85</bouncycastle.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <!-- bcprov arrive par spring-cloud-starter (Feign, Gateway) : cette entree prime sur le BOM Spring Cloud. -->
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>${bouncycastle.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
