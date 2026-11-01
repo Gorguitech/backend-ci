@@ -132,6 +132,7 @@ class UserApiIT extends AbstractIntegrationTest {
         String admin = adminBearer();
         create(admin, "Awa", "Diop");
         Long id = userId("awa.diop");
+        drainAuditMessages();
 
         mvc.perform(put("/api/users/" + id).header("Authorization", admin).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"firstName\":\"Awa\",\"lastName\":\"Ndiaye\"}"))
@@ -141,6 +142,11 @@ class UserApiIT extends AbstractIntegrationTest {
         mvc.perform(put("/api/users/" + id).header("Authorization", admin).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"firstName\":\"\",\"lastName\":\"Ndiaye\"}"))
                 .andExpect(status().isBadRequest());
+
+        List<JsonNode> audit = drainAuditMessages();
+        assertThat(audit).extracting(n -> n.get("action").asText()).containsExactly("UPDATE");
+        assertThat(audit.getFirst().get("entityType").asText()).isEqualTo("User");
+        assertThat(audit.getFirst().get("entityId").asLong()).isEqualTo(id);
     }
 
     @Test

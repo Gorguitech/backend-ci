@@ -144,6 +144,10 @@ class ComptabiliteApiIT {
         mvc.perform(patch("/api/categories-depenses/999999/deactivate").header("Authorization", ADMIN))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Catégorie introuvable : 999999"));
+
+        assertThat(TestMessages.drainAudit(rabbitTemplate, objectMapper))
+                .extracting(e -> e.get("action").asText() + "/" + e.get("entityType").asText())
+                .containsExactlyInAnyOrder("CREATE/CategorieDepense", "DEACTIVATE/CategorieDepense");
     }
 
     @Test
@@ -266,6 +270,11 @@ class ComptabiliteApiIT {
         mvc.perform(patch("/api/autres-recettes/" + id + "/cancel").header("Authorization", GESTIONNAIRE))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").value("Cette recette est déjà annulée"));
         postJson("/api/autres-recettes", GESTIONNAIRE, Map.of("source", "", "amount", 10)).andExpect(status().isBadRequest());
+
+        assertThat(TestMessages.drainAudit(rabbitTemplate, objectMapper))
+                .extracting(e -> e.get("action").asText() + "/" + e.get("entityType").asText())
+                .containsExactlyInAnyOrder("CREATE/AutreRecette", "CREATE/AutreRecette",
+                        "PRINT_RECEIPT/AutreRecette", "CANCEL/AutreRecette");
     }
 
     // ---------------------------------------------------------------- tresorerie

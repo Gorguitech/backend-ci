@@ -70,6 +70,7 @@ class ParametresApiIT extends AbstractIntegrationTest {
     @Test
     void logo_envoiPuisLectureBinaire() throws Exception {
         String admin = adminBearer();
+        drainAuditMessages();
         mvc.perform(get("/api/parametres/logo").header("Authorization", admin))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Aucun logo n'a été configuré"));
@@ -84,6 +85,10 @@ class ParametresApiIT extends AbstractIntegrationTest {
                 .andExpect(content().contentType("image/png"))
                 .andExpect(content().bytes(PNG));
         assertThat(LOGO_DIR.resolve("logo.png")).exists();
+
+        List<JsonNode> audit = drainAuditMessages();
+        assertThat(audit).extracting(n -> n.get("action").asText()).containsExactly("UPLOAD_LOGO");
+        assertThat(audit.getFirst().get("entityType").asText()).isEqualTo("Parametres");
     }
 
     @Test

@@ -63,6 +63,11 @@ class PaiementSalaireApiIT extends AbstractPaiementIT {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Ce paiement est déjà annulé"));
         postJson("/api/paiements-salaires", salaire(4, 10)).andExpect(status().isCreated());
+
+        // la seconde annulation et le doublon, refuses, ne sont pas traces
+        assertThat(drainAudit()).extracting(e -> e.get("action").asText() + "/" + e.get("entityType").asText())
+                .containsExactlyInAnyOrder("CREATE/PaiementSalaire", "CREATE/PaiementSalaire", "CREATE/PaiementSalaire",
+                        "CANCEL/PaiementSalaire");
     }
 
     @Test
