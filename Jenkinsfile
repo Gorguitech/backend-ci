@@ -88,7 +88,7 @@ pipeline {
         TRIVY_VULN_EXIT_CODE = '10'
         // HOME des conteneurs outils, adosse a ~/.cache/internatadmin-ci sur l'hote
         TOOL_HOME = '/ci-home'
-        DC_VERSION = '12.1.0'
+        DC_VERSION = '12.2.2'
         SONAR_PLUGIN_VERSION = '5.0.0.4389'
         DOCKERHUB_USER = 'abdoulaye940'
         DOCKERHUB_REPO = 'internatadmin-backend'
