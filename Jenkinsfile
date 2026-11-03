@@ -97,6 +97,8 @@ pipeline {
         stage('Checkout') {
             steps {
                 checkout scm
+                // reports/ n'est pas suivi par Git : sans ce nettoyage, les rapports des builds precedents seraient archives
+                sh 'rm -rf reports'
                 script {
                     env.GIT_SHA = sh(returnStdout: true, script: 'git rev-parse --short=12 HEAD').trim()
                     def branch = (env.BRANCH_NAME ?: env.GIT_BRANCH ?: '').replaceFirst('^origin/', '')
