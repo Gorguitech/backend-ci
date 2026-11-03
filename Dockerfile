@@ -32,7 +32,9 @@ LABEL org.opencontainers.image.title="internatadmin-monolithe" \
       org.opencontainers.image.description="InternatAdmin, backend monolithique" \
       org.opencontainers.image.vendor="InternatAdmin"
 
-RUN addgroup -S -g 10001 app \
+# libexpat >= 2.10.0-r0 : corrige CVE-2026-117610 et CVE-2026-118370, absent de l'image de base
+RUN apk add --no-cache --upgrade 'libexpat>=2.10.0-r0' \
+    && addgroup -S -g 10001 app \
     && adduser -S -D -H -u 10001 -G app app \
     && mkdir -p /data/logos \
     && chown app:app /data/logos
