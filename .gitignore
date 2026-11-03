@@ -28,3 +28,6 @@ uploads/
 
 # Journaux
 *.log
+
+# Agent Jenkins local
+agent.jar
